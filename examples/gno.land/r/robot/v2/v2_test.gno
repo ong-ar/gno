@@ -1,25 +1,25 @@
-package v1
+package v2
 
 import (
 	"std"
 	"testing"
 
 	"gno.land/p/demo/testutils"
+	"gno.land/p/demo/grc/grc721"
 )
 
-func TestV1(t *testing.T) {
+func TestV2(t *testing.T) {
 	admin := std.Address("g1u4pzrdsnhqd3cypet5qtrk6cdtftxdzd5297fx")
+	testing.SetOriginCaller(admin)
 
 	test1Addr := testutils.TestAddress("test1Addr")
 	test2Addr := testutils.TestAddress("test2Addr")
 
-	testing.SetOriginCaller(admin)
-
 	SetLive(true)
 
-	Mint(admin, TokenID("0"))
-	Mint(test1Addr, TokenID("1"))
-	Mint(test2Addr, TokenID("2"))
+	Mint(admin, grc721.TokenID("0"))
+	Mint(test1Addr, grc721.TokenID("1"))
+	Mint(test2Addr, grc721.TokenID("2"))
 
 	for _, tc := range []struct {
 		name     string
@@ -29,9 +29,9 @@ func TestV1(t *testing.T) {
 		{"BalanceOf(admin)", uint64(1), func() interface{} { return BalanceOf(admin) }},
 		{"BalanceOf(test1Addr)", uint64(1), func() interface{} { return BalanceOf(test1Addr) }},
 		{"BalanceOf(test2Addr)", uint64(1), func() interface{} { return BalanceOf(test2Addr) }},
-		{"OwnerOf(0)", admin, func() interface{} { return OwnerOf(TokenID("0")) }},
-		{"OwnerOf(1)", test1Addr, func() interface{} { return OwnerOf(TokenID("1")) }},
-		{"OwnerOf(2)", test2Addr, func() interface{} { return OwnerOf(TokenID("2")) }},
+		{"OwnerOf(0)", admin, func() interface{} { return OwnerOf(grc721.TokenID("0")) }},
+		{"OwnerOf(1)", test1Addr, func() interface{} { return OwnerOf(grc721.TokenID("1")) }},
+		{"OwnerOf(2)", test2Addr, func() interface{} { return OwnerOf(grc721.TokenID("2")) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := tc.fn()
