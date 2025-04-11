@@ -10,7 +10,7 @@ var (
 	nft = NewNFT("TestNFT", "TNFT", "v1")
 
 	isLive bool = false
-	admin std.Address = "g1u4pzrdsnhqd3cypet5qtrk6cdtftxdzd5297fx"
+	admin std.Address = std.Address("g1u4pzrdsnhqd3cypet5qtrk6cdtftxdzd5297fx")
 )
 
 // func init() {
@@ -18,6 +18,19 @@ var (
 // }
 
 // Getters
+
+func Name() string {
+	return nft.Name()
+}
+
+func Symbol() string {
+	return nft.Symbol()
+}
+
+func TokenCount() uint64 {
+	return nft.TokenCount()
+}
+
 func BalanceOf(user std.Address) uint64 {
 	balance, err := nft.BalanceOf(user)
 	if err != nil {
@@ -51,6 +64,7 @@ func GetApproved(tid grc721.TokenID) std.Address {
 
 // Setters
 func Approve(user std.Address, tid grc721.TokenID) {
+	assertIsLive()
 	err := nft.Approve(user, tid)
 	if err != nil {
 		panic(err)
@@ -58,6 +72,7 @@ func Approve(user std.Address, tid grc721.TokenID) {
 }
 
 func SetApprovalForAll(user std.Address, approved bool) {
+	assertIsLive()
 	err := nft.SetApprovalForAll(user, approved)
 	if err != nil {
 		panic(err)
@@ -65,6 +80,7 @@ func SetApprovalForAll(user std.Address, approved bool) {
 }
 
 func TransferFrom(from, to std.Address, tid grc721.TokenID) {
+	assertIsLive()
 	err := nft.TransferFrom(from, to, tid)
 	if err != nil {
 		panic(err)
@@ -74,8 +90,9 @@ func TransferFrom(from, to std.Address, tid grc721.TokenID) {
 // Admin
 func Mint(to std.Address, tid grc721.TokenID) {
 	caller := std.PreviousRealm().Address()
-	println("caller", caller.String())
 	assertIsAdmin(caller)
+
+	assertIsLive()
 
 	err := nft.Mint(to, tid)
 	if err != nil {
@@ -86,6 +103,8 @@ func Mint(to std.Address, tid grc721.TokenID) {
 func Burn(tid grc721.TokenID) {
 	caller := std.PreviousRealm().Address()
 	assertIsAdmin(caller)
+
+	assertIsLive()
 
 	err := nft.Burn(tid)
 	if err != nil {
@@ -108,7 +127,6 @@ func SetAdmin(addr std.Address) {
 }
 
 // Render
-
 func Render(path string) string {
 	switch {
 	case path == "":
@@ -117,7 +135,6 @@ func Render(path string) string {
 		return "404\n"
 	}
 }
-
 
 // getters for next version
 func GetBalance(addr std.Address) (any, bool) {
@@ -144,6 +161,10 @@ func GetTokenApproval(tid grc721.TokenID) (any, bool) {
 	return nft.getTokenApproval(tid)
 }
 
+func GetTotalSupply() uint64 {
+	return nft.getTotalSupply()
+}
+
 // utils
 func isValidAddress(addr std.Address) error {
 	if !addr.IsValid() {
@@ -160,6 +181,6 @@ func assertIsAdmin(address std.Address) {
 
 func assertIsLive() {
 	if !isLive {
-		panic("restricted access")
+		panic("current version is not live")
 	}
 }

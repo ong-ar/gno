@@ -21,6 +21,7 @@ type NFT struct {
 	tokenApprovals    avl.Tree // TokenId -> ApprovedAddress
 	tokenURIs         avl.Tree // TokenId -> URIs
 	operatorApprovals avl.Tree // "OwnerAddress:OperatorAddress" -> bool
+	totalSupply       uint64
 }
 
 func NewNFT(name string, symbol string, version string) *NFT {
@@ -35,12 +36,13 @@ func NewNFT(name string, symbol string, version string) *NFT {
 		tokenApprovals:    avl.Tree{},
 		tokenURIs:         avl.Tree{},
 		operatorApprovals: avl.Tree{},
+		totalSupply:       0,
 	}
 }
 
 func (s *NFT) Name() string       { return s.name }
 func (s *NFT) Symbol() string     { return s.symbol }
-func (s *NFT) TokenCount() uint64 { return uint64(s.owners.Size()) }
+func (s *NFT) TokenCount() uint64 { return s.getTotalSupply() }
 
 // BalanceOf returns balance of input address
 func (s *NFT) BalanceOf(addr std.Address) (uint64, error) {
@@ -221,6 +223,8 @@ func (s *NFT) Burn(tid grc721.TokenID) error {
 	s.owners.Remove(string(tid))
 	s.burnedOwners.Set(string(tid), owner)
 
+	s.totalSupply -= 1
+
 	std.Emit(
 		grc721.BurnEvent,
 		"from", string(owner),
@@ -327,6 +331,8 @@ func (s *NFT) mint(to std.Address, tid grc721.TokenID) error {
 	s.balances.Set(to.String(), toBalance)
 	s.owners.Set(string(tid), to)
 
+	s.totalSupply += 1
+
 	std.Emit(
 		grc721.MintEvent,
 		"to", string(to),
@@ -414,5 +420,9 @@ func (s *NFT) getTokenApproval(tid grc721.TokenID) (any, bool) {
 	tokenApproval, found := s.tokenApprovals.Get(string(tid))
 
 	return tokenApproval, found
+}
+
+func (s *NFT) getTotalSupply() uint64 {
+	return s.totalSupply
 }
 
