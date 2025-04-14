@@ -1,4 +1,4 @@
-package v1
+package v2
 
 import (
 	"std"
@@ -7,7 +7,7 @@ import (
 
 	"gno.land/p/demo/testutils"
 	"gno.land/p/demo/grc/grc721"
-	
+	v1 "gno.land/r/g1u4pzrdsnhqd3cypet5qtrk6cdtftxdzd5297fx/v1"
 )
 
 func TestV1(t *testing.T) {

@@ -1,4 +1,4 @@
-package v2
+package v1
 
 import (
 	"std"
@@ -7,7 +7,6 @@ import (
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/ufmt"
 	"gno.land/p/demo/grc/grc721"
-	v1 "gno.land/r/robot/v1"
 )
 
 const zeroAddress = std.Address("")
@@ -22,6 +21,7 @@ type NFT struct {
 	tokenApprovals    avl.Tree // TokenId -> ApprovedAddress
 	tokenURIs         avl.Tree // TokenId -> URIs
 	operatorApprovals avl.Tree // "OwnerAddress:OperatorAddress" -> bool
+	ownedTokenIDs     avl.Tree
 	totalSupply       uint64
 }
 
@@ -37,12 +37,14 @@ func NewNFT(name string, symbol string, version string) *NFT {
 		tokenApprovals:    avl.Tree{},
 		tokenURIs:         avl.Tree{},
 		operatorApprovals: avl.Tree{},
+		ownedTokenIDs:     avl.Tree{},
 		totalSupply:       0,
 	}
 }
 
 func (s *NFT) Name() string       { return s.name }
 func (s *NFT) Symbol() string     { return s.symbol }
+func (s *NFT) Version() string    { return s.version }
 func (s *NFT) TokenCount() uint64 { return s.getTotalSupply() }
 
 // BalanceOf returns balance of input address
@@ -67,6 +69,20 @@ func (s *NFT) OwnerOf(tid grc721.TokenID) (std.Address, error) {
 	}
 
 	return owner.(std.Address), nil
+}
+
+// TokenIDsOf returns token ids of input address
+func (s *NFT) TokenIDsOf(addr std.Address) ([]string, error) {
+	if err := isValidAddress(addr); err != nil {
+		return []string{}, err
+	}
+
+	tokenIDs, found := s.getOwnedTokenIDs(addr)
+	if !found {
+		return []string{}, nil
+	}
+
+	return tokenIDs.([]string), nil
 }
 
 // TokenURI returns the URI of input token id
@@ -223,6 +239,7 @@ func (s *NFT) Burn(tid grc721.TokenID) error {
 	s.balances.Set(owner.String(), balance)
 	s.owners.Remove(string(tid))
 	s.burnedOwners.Set(string(tid), owner)
+	s.removeTokenFromOwner(owner, tid)
 
 	s.totalSupply -= 1
 
@@ -299,6 +316,8 @@ func (s *NFT) transfer(from, to std.Address, tid grc721.TokenID) error {
 	s.balances.Set(from.String(), fromBalance)
 	s.balances.Set(to.String(), toBalance)
 	s.owners.Set(string(tid), to)
+	s.removeTokenFromOwner(from, tid)
+	s.addTokenToOwner(to, tid)
 
 	std.Emit(
 		grc721.TransferEvent,
@@ -320,6 +339,10 @@ func (s *NFT) mint(to std.Address, tid grc721.TokenID) error {
 		return grc721.ErrTokenIdAlreadyExists
 	}
 
+	if s.exists(tid) {
+		return grc721.ErrTokenIdAlreadyExists
+	}
+
 	toBalance, err := s.BalanceOf(to)
 	if err != nil {
 		return err
@@ -327,6 +350,7 @@ func (s *NFT) mint(to std.Address, tid grc721.TokenID) error {
 	toBalance += 1
 	s.balances.Set(to.String(), toBalance)
 	s.owners.Set(string(tid), to)
+	s.addTokenToOwner(to, tid)
 
 	s.totalSupply += 1
 
@@ -359,19 +383,49 @@ func (s *NFT) isApprovedOrOwner(addr std.Address, tid grc721.TokenID) bool {
 
 // Checks if token id already exists
 func (s *NFT) exists(tid grc721.TokenID) bool {
-	_, found := s.getOwner(tid)
+	_, found := s.owners.Get(string(tid))
 
 	if found {
 		return found
 	}
 
-	_, foundBurned := s.getBurnedOwner(tid)
+	_, foundBurned := s.burnedOwners.Get(string(tid))
 
 	if foundBurned {
 		return foundBurned
 	}
 
 	return false
+}
+
+func (s *NFT) addTokenToOwner(owner std.Address, tid grc721.TokenID) {
+	val, found := s.getOwnedTokenIDs(owner)
+	var tokenIDs []string
+	if found {
+		tokenIDs = val.([]string)
+	}
+	tokenIDs = append(tokenIDs, string(tid))
+	s.ownedTokenIDs.Set(owner.String(), tokenIDs)
+}
+
+func (s *NFT) removeTokenFromOwner(owner std.Address, tid grc721.TokenID) {
+	val, found := s.getOwnedTokenIDs(owner)
+	if !found {
+		return
+	}
+
+	var tokenIDs []string
+	for _, id := range val.([]string) {
+		if id != string(tid) {
+			tokenIDs = append(tokenIDs, id)
+		}
+	}
+
+	if len(tokenIDs) == 0 {
+		s.ownedTokenIDs.Remove(owner.String())
+	} else {
+		s.ownedTokenIDs.Set(owner.String(), tokenIDs)
+	}
 }
 
 func (s *NFT) RenderHome() (str string) {
@@ -386,114 +440,45 @@ func (s *NFT) RenderHome() (str string) {
 func (s *NFT) getBalance(addr std.Address) (any, bool) {
 	balance, found := s.balances.Get(addr.String())
 
-	if found {
-		return balance, found
-	}
-
-	vBalance, vFound := v1.GetBalance(addr)
-
-	if vFound {
-		s.balances.Set(addr.String(), vBalance)
-	}
-
-	return vBalance, vFound
+	return balance, found
 }
 
 func (s *NFT) getOwner(tid grc721.TokenID) (any, bool) {
-	_, bFound := s.getBurnedOwner(tid)
-	if bFound {
-		return nil, false
-	}
-
 	owner, found := s.owners.Get(string(tid))
 
-	if found {
-		return owner, found
-	}
-
-	vOwner, vFound := v1.GetOwner(tid)
-
-	if vFound {
-		s.owners.Set(string(tid), vOwner)
-	}
-
-	return vOwner, vFound
+	return owner, found
 }
 
 func (s *NFT) getBurnedOwner(tid grc721.TokenID) (any, bool) {
 	burnedOwner, found := s.burnedOwners.Get(string(tid))
 
-	if found {
-		return burnedOwner, found
-	}
-
-	vBurnedOwner, vFound := v1.GetBurnedOwner(tid)
-
-	if vFound {
-		s.burnedOwners.Set(string(tid), vBurnedOwner)
-	}
-
-	return vBurnedOwner, vFound
+	return burnedOwner, found
 }
 
 func (s *NFT) getTokenURI(tid grc721.TokenID) (any, bool) {
 	uri, found := s.tokenURIs.Get(string(tid))
 
-	if found {
-		return uri, found
-	}
-
-	vURI, vFound := v1.GetTokenURI(tid)
-
-	if vFound {
-		s.tokenURIs.Set(string(tid), vURI)
-	}
-
-	return vURI, vFound
+	return uri, found
 }
 
 func (s *NFT) getOperatorApproval(key string) (any, bool) {
 	operatorApproval, found := s.operatorApprovals.Get(key)
 
-	if found {
-		return operatorApproval, found
-	}
-
-	vOperatorApproval, vFound := v1.GetOperatorApproval(key)
-
-	if vFound {
-		s.operatorApprovals.Set(key, vOperatorApproval)
-	}
-
-	return vOperatorApproval, vFound
+	return operatorApproval, found
 }
 
 func (s *NFT) getTokenApproval(tid grc721.TokenID) (any, bool) {
 	tokenApproval, found := s.tokenApprovals.Get(string(tid))
 
-	if found {
-		return tokenApproval, found
-	}
-
-	vTokenApproval, vFound := v1.GetTokenApproval(tid)
-
-	if vFound {
-		s.tokenApprovals.Set(string(tid), vTokenApproval)
-	}
-
-	return vTokenApproval, vFound
+	return tokenApproval, found
 }
 
 func (s *NFT) getTotalSupply() uint64 {
-	totalSupply := s.totalSupply
+	return s.totalSupply
+}
 
-	if totalSupply != 0 {
-		return totalSupply
-	}
+func (s *NFT) getOwnedTokenIDs(addr std.Address) (any, bool) {
+	tokenIDs, found := s.ownedTokenIDs.Get(addr.String())
 
-	vTotalSupply := v1.GetTotalSupply()
-
-	s.totalSupply = vTotalSupply
-
-	return vTotalSupply
+	return tokenIDs, found
 }

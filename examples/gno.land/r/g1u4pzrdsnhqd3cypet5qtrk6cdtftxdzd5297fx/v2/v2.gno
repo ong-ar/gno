@@ -1,4 +1,4 @@
-package v1
+package v2
 
 import (
 	"std"
@@ -7,24 +7,23 @@ import (
 )
 
 var (
-	nft = NewNFT("TestNFT", "TNFT", "v1")
+	nft = NewNFT("TestNFT", "TNFT", "v2")
 
 	isLive bool = false
 	admin std.Address = std.Address("g1u4pzrdsnhqd3cypet5qtrk6cdtftxdzd5297fx")
 )
 
-// func init() {
-// 	nft.Mint("g1u4pzrdsnhqd3cypet5qtrk6cdtftxdzd5297fx", grc721.TokenID("0"))
-// }
-
 // Getters
-
 func Name() string {
 	return nft.Name()
 }
 
 func Symbol() string {
 	return nft.Symbol()
+}
+
+func Version() string {
+	return nft.Version()
 }
 
 func TokenCount() uint64 {
@@ -47,6 +46,15 @@ func OwnerOf(tid grc721.TokenID) std.Address {
 	}
 
 	return owner
+}
+
+func TokenIDsOf(user std.Address) []string {
+	tokenIDs, err := nft.TokenIDsOf(user)
+	if err != nil {
+		panic(err)
+	}
+
+	return tokenIDs
 }
 
 func IsApprovedForAll(owner, user std.Address) bool {
@@ -91,7 +99,7 @@ func TransferFrom(from, to std.Address, tid grc721.TokenID) {
 func Mint(to std.Address, tid grc721.TokenID) {
 	caller := std.PreviousRealm().Address()
 	assertIsAdmin(caller)
-
+	
 	assertIsLive()
 
 	err := nft.Mint(to, tid)
@@ -138,7 +146,7 @@ func Render(path string) string {
 
 // getters for next version
 func GetBalance(addr std.Address) (any, bool) {
-	return nft.balances.Get(addr.String())
+	return nft.getBalance(addr)
 }
 
 func GetOwner(tid grc721.TokenID) (any, bool) {
@@ -161,8 +169,8 @@ func GetTokenApproval(tid grc721.TokenID) (any, bool) {
 	return nft.getTokenApproval(tid)
 }
 
-func GetTotalSupply() uint64 {
-	return nft.getTotalSupply()
+func GetOwnedTokenIDs(addr std.Address) (any, bool) {
+	return nft.getOwnedTokenIDs(addr)
 }
 
 // utils

@@ -6,8 +6,8 @@ import (
 	"gno.land/p/demo/grc/grc721"
 	"gno.land/p/demo/testutils"
 
-	v1 "gno.land/r/robot/v1"
-	v2 "gno.land/r/robot/v2"
+	v1 "gno.land/r/g1u4pzrdsnhqd3cypet5qtrk6cdtftxdzd5297fx/v1"
+	v2 "gno.land/r/g1u4pzrdsnhqd3cypet5qtrk6cdtftxdzd5297fx/v2"
 )
 
 var (
@@ -148,6 +148,14 @@ func main() {
 	expectPanic(func() {
 		v1.Burn(grc721.TokenID("8"))
 	}, `v1.Burn(grc721.TokenID("8"))`)
+
+	println(`v1.TokenIDsOf(admin)`, "-", v1.TokenIDsOf(admin))
+	println(`v1.TokenIDsOf(test1Addr)`, "-", v1.TokenIDsOf(test1Addr))
+	println(`v1.TokenIDsOf(test2Addr)`, "-", v1.TokenIDsOf(test2Addr))
+
+	println(`v2.TokenIDsOf(admin)`, "-", v2.TokenIDsOf(admin))
+	println(`v2.TokenIDsOf(test1Addr)`, "-", v2.TokenIDsOf(test1Addr))
+	println(`v2.TokenIDsOf(test2Addr)`, "-", v2.TokenIDsOf(test2Addr))
 
 	// v2
 	println("v2.Name()", "-", v2.Name())

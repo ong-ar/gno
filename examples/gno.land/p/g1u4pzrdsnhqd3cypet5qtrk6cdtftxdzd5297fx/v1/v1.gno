@@ -21,6 +21,7 @@ type NFT struct {
 	tokenApprovals    avl.Tree // TokenId -> ApprovedAddress
 	tokenURIs         avl.Tree // TokenId -> URIs
 	operatorApprovals avl.Tree // "OwnerAddress:OperatorAddress" -> bool
+	ownedTokenIDs     avl.Tree
 	totalSupply       uint64
 }
 
@@ -36,12 +37,14 @@ func NewNFT(name string, symbol string, version string) *NFT {
 		tokenApprovals:    avl.Tree{},
 		tokenURIs:         avl.Tree{},
 		operatorApprovals: avl.Tree{},
+		ownedTokenIDs:     avl.Tree{},
 		totalSupply:       0,
 	}
 }
 
 func (s *NFT) Name() string       { return s.name }
 func (s *NFT) Symbol() string     { return s.symbol }
+func (s *NFT) Version() string    { return s.version }
 func (s *NFT) TokenCount() uint64 { return s.getTotalSupply() }
 
 // BalanceOf returns balance of input address
@@ -66,6 +69,20 @@ func (s *NFT) OwnerOf(tid grc721.TokenID) (std.Address, error) {
 	}
 
 	return owner.(std.Address), nil
+}
+
+// TokenIDsOf returns token ids of input address
+func (s *NFT) TokenIDsOf(addr std.Address) ([]string, error) {
+	if err := isValidAddress(addr); err != nil {
+		return []string{}, err
+	}
+
+	tokenIDs, found := s.getOwnedTokenIDs(addr)
+	if !found {
+		return []string{}, nil
+	}
+
+	return tokenIDs.([]string), nil
 }
 
 // TokenURI returns the URI of input token id
@@ -222,6 +239,7 @@ func (s *NFT) Burn(tid grc721.TokenID) error {
 	s.balances.Set(owner.String(), balance)
 	s.owners.Remove(string(tid))
 	s.burnedOwners.Set(string(tid), owner)
+	s.removeTokenFromOwner(owner, tid)
 
 	s.totalSupply -= 1
 
@@ -298,6 +316,8 @@ func (s *NFT) transfer(from, to std.Address, tid grc721.TokenID) error {
 	s.balances.Set(from.String(), fromBalance)
 	s.balances.Set(to.String(), toBalance)
 	s.owners.Set(string(tid), to)
+	s.removeTokenFromOwner(from, tid)
+	s.addTokenToOwner(to, tid)
 
 	std.Emit(
 		grc721.TransferEvent,
@@ -330,6 +350,7 @@ func (s *NFT) mint(to std.Address, tid grc721.TokenID) error {
 	toBalance += 1
 	s.balances.Set(to.String(), toBalance)
 	s.owners.Set(string(tid), to)
+	s.addTokenToOwner(to, tid)
 
 	s.totalSupply += 1
 
@@ -375,6 +396,36 @@ func (s *NFT) exists(tid grc721.TokenID) bool {
 	}
 
 	return false
+}
+
+func (s *NFT) addTokenToOwner(owner std.Address, tid grc721.TokenID) {
+	val, found := s.getOwnedTokenIDs(owner)
+	var tokenIDs []string
+	if found {
+		tokenIDs = val.([]string)
+	}
+	tokenIDs = append(tokenIDs, string(tid))
+	s.ownedTokenIDs.Set(owner.String(), tokenIDs)
+}
+
+func (s *NFT) removeTokenFromOwner(owner std.Address, tid grc721.TokenID) {
+	val, found := s.getOwnedTokenIDs(owner)
+	if !found {
+		return
+	}
+
+	var tokenIDs []string
+	for _, id := range val.([]string) {
+		if id != string(tid) {
+			tokenIDs = append(tokenIDs, id)
+		}
+	}
+
+	if len(tokenIDs) == 0 {
+		s.ownedTokenIDs.Remove(owner.String())
+	} else {
+		s.ownedTokenIDs.Set(owner.String(), tokenIDs)
+	}
 }
 
 func (s *NFT) RenderHome() (str string) {
@@ -426,3 +477,8 @@ func (s *NFT) getTotalSupply() uint64 {
 	return s.totalSupply
 }
 
+func (s *NFT) getOwnedTokenIDs(addr std.Address) (any, bool) {
+	tokenIDs, found := s.ownedTokenIDs.Get(addr.String())
+
+	return tokenIDs, found
+}

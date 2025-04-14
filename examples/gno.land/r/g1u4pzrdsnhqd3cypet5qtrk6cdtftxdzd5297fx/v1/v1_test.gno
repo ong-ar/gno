@@ -1,4 +1,4 @@
-package v2
+package v1
 
 import (
 	"std"
@@ -7,7 +7,6 @@ import (
 
 	"gno.land/p/demo/testutils"
 	"gno.land/p/demo/grc/grc721"
-	v1 "gno.land/r/robot/v1"
 )
 
 func TestV1(t *testing.T) {
@@ -15,9 +14,7 @@ func TestV1(t *testing.T) {
 
 	test1Addr := testutils.TestAddress("test1Addr")
 	test2Addr := testutils.TestAddress("test2Addr")
-
-	// Mint(admin, grc721.TokenID("0"))
-	// Mint(test1Addr, grc721.TokenID("1"))
+	test3Addr := testutils.TestAddress("test3Addr")
 
 	for _, tc := range []struct {
 		name     string
@@ -140,6 +137,7 @@ func TestV1(t *testing.T) {
 		{`BalanceOf(test2Addr)`, uint64(3), false, func() any { 
 			return BalanceOf(test2Addr)
 		}},
+		
 		{`Burn(grc721.TokenID("8"))`, "restricted access", true, func() any { 
 			Burn(grc721.TokenID("8"))
 			return nil
@@ -151,6 +149,24 @@ func TestV1(t *testing.T) {
 		{`Burn(grc721.TokenID("8"))`, nil, true, func() any { 
 			Burn(grc721.TokenID("8"))
 			return nil
+		}},
+		{`TokenIDsOf(admin)`, stringSliceToString([]string{"0", "1", "2"}), false, func() any { 
+			return stringSliceToString(TokenIDsOf(admin))
+		}},
+		{`TokenIDsOf(test1Addr)`, stringSliceToString([]string{"5", "6", "7"}), false, func() any { 
+			return stringSliceToString(TokenIDsOf(test1Addr))
+		}},
+		{`TokenIDsOf(test2Addr)`, stringSliceToString([]string{"3", "4"}), false, func() any { 
+			return stringSliceToString(TokenIDsOf(test2Addr))
+		}},
+		{`BalanceOf(admin)`, uint64(3), false, func() any { 
+			return BalanceOf(admin)
+		}},
+		{`BalanceOf(test1Addr)`, uint64(3), false, func() any { 
+			return BalanceOf(test1Addr)
+		}},
+		{`BalanceOf(test2Addr)`, uint64(2), false, func() any { 
+			return BalanceOf(test2Addr)
 		}},
 		{`OwnerOf(grc721.TokenID("8"))`, "invalid token id", true, func() any { 
 			OwnerOf(grc721.TokenID("8"))
@@ -213,3 +229,14 @@ func TestV1(t *testing.T) {
 	}
 }
 
+func stringSliceToString(arr []string) string {
+	result := "["
+	for i, v := range arr {
+		result += "\"" + v + "\""
+		if i != len(arr)-1 {
+			result += ", "
+		}
+	}
+	result += "]"
+	return result
+}
