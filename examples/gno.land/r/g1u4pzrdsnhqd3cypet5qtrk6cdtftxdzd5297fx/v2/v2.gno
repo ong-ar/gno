@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	nft = NewNFT("TestNFT", "TNFT", "v2")
+	nft = newNFT("TestNFT", "TNFT", "v2")
 
 	isLive bool = false
 	admin std.Address = std.Address("g1u4pzrdsnhqd3cypet5qtrk6cdtftxdzd5297fx")
@@ -145,32 +145,32 @@ func Render(path string) string {
 }
 
 // getters for next version
-func GetBalance(addr std.Address) (any, bool) {
-	return nft.getBalance(addr)
+func ZZ_GetBalance(addr std.Address) (any, bool) {
+	return nft.ZZ_GetBalance(addr)
 }
 
-func GetOwner(tid grc721.TokenID) (any, bool) {
-	return nft.getOwner(tid)
+func ZZ_GetOwner(tid grc721.TokenID) (any, bool) {
+	return nft.ZZ_GetOwner(tid)
 }
 
-func GetBurnedOwner(tid grc721.TokenID) (any, bool) {
-	return nft.getBurnedOwner(tid)
+func ZZ_GetBurnedOwner(tid grc721.TokenID) (any, bool) {
+	return nft.ZZ_GetBurnedOwner(tid)
 }
 
-func GetTokenURI(tid grc721.TokenID) (any, bool) {
-	return nft.getTokenURI(tid)
+func ZZ_GetTokenURI(tid grc721.TokenID) (any, bool) {
+	return nft.ZZ_GetTokenURI(tid)
 }
 
-func GetOperatorApproval(key string) (any, bool) {
-	return nft.getOperatorApproval(key)
+func ZZ_GetOperatorApproval(key string) (any, bool) {
+	return nft.ZZ_GetOperatorApproval(key)
 }
 
-func GetTokenApproval(tid grc721.TokenID) (any, bool) {
-	return nft.getTokenApproval(tid)
+func ZZ_GetTokenApproval(tid grc721.TokenID) (any, bool) {
+	return nft.ZZ_GetTokenApproval(tid)
 }
 
-func GetOwnedTokenIDs(addr std.Address) (any, bool) {
-	return nft.getOwnedTokenIDs(addr)
+func ZZ_GetOwnedTokenIDs(addr std.Address) (any, bool) {
+	return nft.ZZ_GetOwnedTokenIDs(addr)
 }
 
 // utils

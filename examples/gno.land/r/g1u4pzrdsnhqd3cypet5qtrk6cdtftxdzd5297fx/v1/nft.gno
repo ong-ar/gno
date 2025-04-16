@@ -25,7 +25,7 @@ type NFT struct {
 	totalSupply       uint64
 }
 
-func NewNFT(name string, symbol string, version string) *NFT {
+func newNFT(name string, symbol string, version string) *NFT {
 	return &NFT{
 		name:              name,
 		symbol:            symbol,
@@ -45,7 +45,7 @@ func NewNFT(name string, symbol string, version string) *NFT {
 func (s *NFT) Name() string       { return s.name }
 func (s *NFT) Symbol() string     { return s.symbol }
 func (s *NFT) Version() string    { return s.version }
-func (s *NFT) TokenCount() uint64 { return s.getTotalSupply() }
+func (s *NFT) TokenCount() uint64 { return s.ZZ_GetTotalSupply() }
 
 // BalanceOf returns balance of input address
 func (s *NFT) BalanceOf(addr std.Address) (uint64, error) {
@@ -53,7 +53,7 @@ func (s *NFT) BalanceOf(addr std.Address) (uint64, error) {
 		return 0, err
 	}
 
-	balance, found := s.getBalance(addr)
+	balance, found := s.ZZ_GetBalance(addr)
 	if !found {
 		return 0, nil
 	}
@@ -63,7 +63,7 @@ func (s *NFT) BalanceOf(addr std.Address) (uint64, error) {
 
 // OwnerOf returns owner of input token id
 func (s *NFT) OwnerOf(tid grc721.TokenID) (std.Address, error) {
-	owner, found := s.getOwner(tid)
+	owner, found := s.ZZ_GetOwner(tid)
 	if !found {
 		return "", grc721.ErrInvalidTokenId
 	}
@@ -77,7 +77,7 @@ func (s *NFT) TokenIDsOf(addr std.Address) ([]string, error) {
 		return []string{}, err
 	}
 
-	tokenIDs, found := s.getOwnedTokenIDs(addr)
+	tokenIDs, found := s.ZZ_GetOwnedTokenIDs(addr)
 	if !found {
 		return []string{}, nil
 	}
@@ -87,7 +87,7 @@ func (s *NFT) TokenIDsOf(addr std.Address) ([]string, error) {
 
 // TokenURI returns the URI of input token id
 func (s *NFT) GetTokenURI(tid grc721.TokenID) (string, error) {
-	uri, found := s.getTokenURI(tid)
+	uri, found := s.ZZ_GetTokenURI(tid)
 	if !found {
 		return "", grc721.ErrInvalidTokenId
 	}
@@ -118,7 +118,7 @@ func (s *NFT) SetTokenURI(tid grc721.TokenID, tURI grc721.TokenURI) (bool, error
 // Otherwise, returns false
 func (s *NFT) IsApprovedForAll(owner, operator std.Address) bool {
 	key := owner.String() + ":" + operator.String()
-	_, found := s.getOperatorApproval(key)
+	_, found := s.ZZ_GetOperatorApproval(key)
 	if !found {
 		return false
 	}
@@ -158,7 +158,7 @@ func (s *NFT) Approve(to std.Address, tid grc721.TokenID) error {
 
 // GetApproved return the approved address for token
 func (s *NFT) GetApproved(tid grc721.TokenID) (std.Address, error) {
-	addr, found := s.getTokenApproval(tid)
+	addr, found := s.ZZ_GetTokenApproval(tid)
 	if !found {
 		return zeroAddress, grc721.ErrTokenIdNotHasApproved
 	}
@@ -364,7 +364,7 @@ func (s *NFT) mint(to std.Address, tid grc721.TokenID) error {
 }
 
 func (s *NFT) isApprovedOrOwner(addr std.Address, tid grc721.TokenID) bool {
-	owner, found := s.getOwner(tid)
+	owner, found := s.ZZ_GetOwner(tid)
 	if !found {
 		return false
 	}
@@ -399,7 +399,7 @@ func (s *NFT) exists(tid grc721.TokenID) bool {
 }
 
 func (s *NFT) addTokenToOwner(owner std.Address, tid grc721.TokenID) {
-	val, found := s.getOwnedTokenIDs(owner)
+	val, found := s.ZZ_GetOwnedTokenIDs(owner)
 	var tokenIDs []string
 	if found {
 		tokenIDs = val.([]string)
@@ -409,7 +409,7 @@ func (s *NFT) addTokenToOwner(owner std.Address, tid grc721.TokenID) {
 }
 
 func (s *NFT) removeTokenFromOwner(owner std.Address, tid grc721.TokenID) {
-	val, found := s.getOwnedTokenIDs(owner)
+	val, found := s.ZZ_GetOwnedTokenIDs(owner)
 	if !found {
 		return
 	}
@@ -437,47 +437,47 @@ func (s *NFT) RenderHome() (str string) {
 }
 
 // getter
-func (s *NFT) getBalance(addr std.Address) (any, bool) {
+func (s *NFT) ZZ_GetBalance(addr std.Address) (any, bool) {
 	balance, found := s.balances.Get(addr.String())
 
 	return balance, found
 }
 
-func (s *NFT) getOwner(tid grc721.TokenID) (any, bool) {
+func (s *NFT) ZZ_GetOwner(tid grc721.TokenID) (any, bool) {
 	owner, found := s.owners.Get(string(tid))
 
 	return owner, found
 }
 
-func (s *NFT) getBurnedOwner(tid grc721.TokenID) (any, bool) {
+func (s *NFT) ZZ_GetBurnedOwner(tid grc721.TokenID) (any, bool) {
 	burnedOwner, found := s.burnedOwners.Get(string(tid))
 
 	return burnedOwner, found
 }
 
-func (s *NFT) getTokenURI(tid grc721.TokenID) (any, bool) {
+func (s *NFT) ZZ_GetTokenURI(tid grc721.TokenID) (any, bool) {
 	uri, found := s.tokenURIs.Get(string(tid))
 
 	return uri, found
 }
 
-func (s *NFT) getOperatorApproval(key string) (any, bool) {
+func (s *NFT) ZZ_GetOperatorApproval(key string) (any, bool) {
 	operatorApproval, found := s.operatorApprovals.Get(key)
 
 	return operatorApproval, found
 }
 
-func (s *NFT) getTokenApproval(tid grc721.TokenID) (any, bool) {
+func (s *NFT) ZZ_GetTokenApproval(tid grc721.TokenID) (any, bool) {
 	tokenApproval, found := s.tokenApprovals.Get(string(tid))
 
 	return tokenApproval, found
 }
 
-func (s *NFT) getTotalSupply() uint64 {
+func (s *NFT) ZZ_GetTotalSupply() uint64 {
 	return s.totalSupply
 }
 
-func (s *NFT) getOwnedTokenIDs(addr std.Address) (any, bool) {
+func (s *NFT) ZZ_GetOwnedTokenIDs(addr std.Address) (any, bool) {
 	tokenIDs, found := s.ownedTokenIDs.Get(addr.String())
 
 	return tokenIDs, found
